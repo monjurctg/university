@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System - Unified Panel</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* BASE STYLES */
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            color: #374151;
+            /* Default body text color */
+        }
+
+        h1,
+        h2,
+        h3 {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        /* --- ADMIN PANEL THEME & STYLES (Restored to Original Naming) --- */
+        :root {
+            --admin-primary-color: #008080;
+            /* Teal */
+            --admin-primary-dark: #006666;
+            --admin-secondary-color: #f7f9fc;
+        }
+
+        /* Styles applied when Admin Login is active */
+        body.admin-login-mode {
+            background-color: var(--admin-primary-color);
+            background-image: linear-gradient(135deg, var(--admin-primary-color) 0%, #00a0a0 100%);
+        }
+
+        /* Styles applied when Admin Dashboard is active */
+        body.admin-dashboard-mode {
+            background-image: none;
+            background-color: var(--admin-secondary-color);
+        }
+
+        /* Original Admin Sidebar Styles (Using original class names: .sidebar, .sidebar-link) */
+        .sidebar {
+            background-color: var(--admin-primary-color);
+        }
+
+        .sidebar-link.active {
+            background-color: var(--admin-primary-dark);
+        }
+
+        .sidebar-link:hover:not(.active) {
+            background-color: rgba(0, 128, 128, 0.8);
+        }
+
+        .btn-primary {
+            background-color: var(--admin-primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--admin-primary-dark);
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: var(--admin-primary-color);
+            border-radius: 10px;
+        }
+
+        /* --- STUDENT PANEL THEME & STYLES --- */
+        :root {
+            --student-primary: #108b88;
+            --student-primary-dark: #0d6e6c;
+            --student-bg-light: #f4f7f9;
+        }
+
+        body.student-mode {
+            background-color: var(--student-bg-light);
+        }
+
+        /* Student Sidebar styling (Using original class names: .student-sidebar-link) */
+        .student-sidebar-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.85);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+        }
+
+        .student-sidebar-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .student-sidebar-link.active {
+            background-color: var(--student-bg-light);
+            color: var(--student-primary);
+            border-left-color: #fbbf24;
+        }
+
+        .student-sidebar-link.active i {
+            color: var(--student-primary);
+        }
+
+        /* Utility to hide scrollbar (for clean main view) */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* General Content Sections */
+        .admin-content-section,
+        .student-content-section {
+            /* Use this to differentiate content sections */
+        }
+
+        /* Modal Style for Student Panel */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+
+<body class="initial-mode flex justify-center items-center">
+
+    <div id="message-box"
+        class="fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-50 transition-transform duration-300 transform translate-x-full">
+    </div>
+
+    <div id="chooser-view" class="w-full max-w-lg p-10 text-center bg-white rounded-xl shadow-2xl space-y-6">
+        <h1 class="text-3xl font-bold text-[#108b88]">Library System Access</h1>
+        <p class="text-gray-600">Please choose your login portal:</p>
+        <div class="space-y-4">
+            <button onclick="showApplication('admin')"
+                class="w-full py-3 bg-[#008080] hover:bg-[#006666] text-white font-bold rounded-xl transition shadow-md flex items-center justify-center space-x-2">
+                <i data-lucide="shield"></i> <span>Admin Panel Login</span>
+            </button>
+            <button onclick="showApplication('student')"
+                class="w-full py-3 bg-[#108b88] hover:bg-[#0d6e6c] text-white font-bold rounded-xl transition shadow-md flex items-center justify-center space-x-2">
+                <i data-lucide="user"></i> <span>Student Panel Login</span>
+            </button>
+        </div>
+    </div>
+
+
+    <div id="admin-application" class="hidden min-h-screen w-full">
+        <div id="admin-login-view" class="w-full h-screen flex items-center justify-center">
+            <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-md">
+                <div class="flex items-center space-x-3 pb-6 border-b border-gray-200 mb-6">
+                    <i data-lucide="shield-half" class="w-8 h-8 text-teal-700"></i>
+                    <h2 class="text-2xl font-bold text-gray-800">Admin Login</h2>
+                </div>
+                <form onsubmit="handleAdminLogin(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="admin-email" value="admin@lms.edu"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="admin-password" value="123456"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <button type="submit"
+                        class="w-full py-3 bg-[#008080] hover:bg-[#006666] text-white font-bold rounded-xl transition shadow-md">
+                        Sign In to Dashboard
+                    </button>
+                </form>
+                <p class="text-center text-xs text-gray-400 mt-6">Credentials: admin@lms.edu / 123456</p>
+                <button onclick="showApplication('chooser')"
+                    class="w-full mt-4 text-xs text-teal-600 hover:text-teal-800">Change Portal</button>
+            </div>
+        </div>
+
+        <div id="admin-main-content-view" class="hidden min-h-screen w-full flex">
+            <aside class="sidebar w-64 flex flex-col p-4 shadow-lg shrink-0 text-white">
+                <div class="flex items-center space-x-3 pb-6 border-b border-teal-500/30">
+                    <div
+                        class="bg-white text-teal-700 font-bold w-10 h-10 flex items-center justify-center rounded-lg shadow">
+                        A</div>
+                    <h1 class="text-xl font-bold text-white tracking-wide">Admin Panel</h1>
+                </div>
+                <nav class="flex-grow mt-6 space-y-2">
+                    <button onclick="switchAdminTab('admin-dashboard', this)"
+                        class="sidebar-link active w-full flex items-center space-x-3 p-3 rounded-xl transition"> <i
+                            data-lucide="layout-dashboard"></i> <span>Dashboard</span>
+                    </button>
+                    <button onclick="switchAdminTab('book-management', this)"
+                        class="sidebar-link w-full flex items-center space-x-3 p-3 rounded-xl transition">
+                        <i data-lucide="book-open"></i> <span>Books</span>
+                    </button>
+                    <button onclick="switchAdminTab('member-management', this)"
+                        class="sidebar-link w-full flex items-center space-x-3 p-3 rounded-xl transition">
+                        <i data-lucide="users"></i> <span>Members</span>
+                    </button>
+                    <button onclick="switchAdminTab('admin-users', this)"
+                        class="sidebar-link w-full flex items-center space-x-3 p-3 rounded-xl transition">
+                        <i data-lucide="shield"></i> <span>Admins</span>
+                    </button>
+                </nav>
+                <button onclick="handleLogout('admin', false)"
+                    class="mt-auto flex items-center justify-center space-x-2 py-3 bg-red-500 hover:bg-red-600 rounded-xl transition">
+                    <i data-lucide="log-out"></i> <span>Logout</span>
+                </button>
+            </aside>
+
+            <div class="flex-1 p-8 custom-scroll overflow-y-auto">
+                <div class="flex items-center justify-between pb-6 mb-8 border-b border-gray-200">
+                    <h2 class="text-3xl font-bold text-gray-800">Dashboard</h2>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-right">
+                            <p id="admin-header-name" class="font-semibold text-sm">Loading...</p>
+                            <p class="text-xs text-gray-500">Admin</p>
+                        </div>
+                        <img id="admin-header-avatar" src="" alt="Admin"
+                            class="w-10 h-10 rounded-full border-2 border-teal-500">
+                    </div>
+                </div>
+
+                <section id="admin-dashboard-content" class="admin-content-section space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-teal-500">
+                            <p class="text-gray-500 text-sm">Total Books</p>
+                            <h3 id="total-books-stat" class="text-3xl font-bold mt-1">0</h3>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                            <p class="text-gray-500 text-sm">Total Members</p>
+                            <h3 id="total-members-stat" class="text-3xl font-bold mt-1">0</h3>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-red-500">
+                            <p class="text-gray-500 text-sm">Books Issued</p>
+                            <h3 id="books-issued-stat" class="text-3xl font-bold mt-1">0</h3>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Latest Transactions</h3>
+                        <div id="transaction-list">
+                            <p class="text-sm text-gray-500">No recent transactions.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="book-management-content" class="admin-content-section hidden space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Add New Book</h3>
+                        <form id="add-book-form" onsubmit="saveBook(event)" class="grid grid-cols-5 gap-4">
+                            <input id="book-title" placeholder="Title" required class="border p-2 rounded">
+                            <input id="book-author" placeholder="Author" required class="border p-2 rounded">
+                            <input id="book-isbn" placeholder="ISBN" required class="border p-2 rounded">
+                            <input id="book-quantity" type="number" placeholder="Qty" required
+                                class="border p-2 rounded">
+                            <button type="submit"
+                                class="bg-teal-600 text-white rounded font-medium hover:bg-teal-700">Add</button>
+                        </form>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Catalog</h3>
+                        <div id="book-management-list">Loading...</div>
+                    </div>
+                </section>
+
+                <section id="member-management-content" class="admin-content-section hidden space-y-6">
+                    <div id="member-management-tabs" class="flex space-x-4 border-b">
+                        <button data-subtab="view" onclick="switchAdminSubTab('member', 'view', this)"
+                            class="tab-btn active py-2 border-b-2 border-teal-600 font-semibold text-teal-600">View
+                            Members</button>
+                        <button data-subtab="add" onclick="switchAdminSubTab('member', 'add', this)"
+                            class="tab-btn py-2 text-gray-500 hover:text-teal-600">Add Member</button>
+                        <button data-subtab="issue-return" onclick="switchAdminSubTab('member', 'issue-return', this)"
+                            class="tab-btn py-2 text-gray-500 hover:text-teal-600">Issue/Return</button>
+                    </div>
+
+                    <div id="member-view-tab" class="member-subtab-content bg-white p-6 rounded-xl shadow">
+                        <h3 class="font-bold mb-4">Registered Members</h3>
+                        <div id="member-view-list">Loading...</div>
+                    </div>
+
+                    <div id="member-add-tab"
+                        class="member-subtab-content hidden bg-white p-6 rounded-xl shadow max-w-lg">
+                        <h3 class="font-bold mb-4">Register New Member</h3>
+                        <form id="add-member-form" onsubmit="addMember(event)" class="space-y-4">
+                            <input id="member-name" placeholder="Full Name" required class="w-full border p-2 rounded">
+                            <input id="member-id" placeholder="Student ID (e.g., S1234)" required
+                                class="w-full border p-2 rounded">
+                            <input id="member-email" type="email" placeholder="Email" required
+                                class="w-full border p-2 rounded">
+                            <input id="member-password" type="password" placeholder="Password (Default: pass123)"
+                                class="w-full border p-2 rounded">
+                            <button type="submit"
+                                class="w-full bg-teal-600 text-white p-2 rounded font-medium hover:bg-teal-700">Register</button>
+                        </form>
+                    </div>
+
+                    <div id="member-issue-return-tab"
+                        class="member-subtab-content hidden bg-white p-6 rounded-xl shadow max-w-lg">
+                        <h3 class="font-bold mb-4">Issue/Return Book</h3>
+                        <div class="space-y-4">
+                            <input placeholder="Member ID (e.g., S1234)" class="w-full border p-2 rounded">
+                            <input placeholder="Book ISBN (e.g., 978-013)" class="w-full border p-2 rounded">
+                            <button onclick="showMessage('Simulated', 'Issue/Return processed', 'info')"
+                                class="w-full bg-blue-600 text-white p-2 rounded font-medium hover:bg-blue-700">Process</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="admin-users-content" class="admin-content-section hidden space-y-6">
+                    <div id="admin-users-tabs" class="flex space-x-4 border-b">
+                        <button data-subtab="add-multiple" onclick="switchAdminSubTab('admin', 'add-multiple', this)"
+                            class="tab-btn active py-2 border-b-2 border-teal-600 font-semibold text-teal-600">Bulk
+                            Add</button>
+                        <button data-subtab="change-password"
+                            onclick="switchAdminSubTab('admin', 'change-password', this)"
+                            class="tab-btn py-2 text-gray-500 hover:text-teal-600">Password</button>
+                    </div>
+
+                    <div id="admin-add-multiple-tab" class="admin-subtab-content bg-white p-6 rounded-xl shadow">
+                        <h3 class="font-bold mb-2">Add Multiple Admins (CSV)</h3>
+                        <textarea class="w-full border p-3 rounded h-32" placeholder="email,password,role"></textarea>
+                        <button onclick="showMessage('Simulated', 'Bulk upload processed', 'success')"
+                            class="mt-2 bg-blue-600 text-white px-4 py-2 rounded">Process</button>
+                    </div>
+
+                    <div id="admin-change-password-tab"
+                        class="admin-subtab-content hidden bg-white p-6 rounded-xl shadow max-w-md">
+                        <h3 class="font-bold mb-4">Change Password</h3>
+                        <input type="password" placeholder="New Password" class="w-full border p-2 rounded mb-4">
+                        <button onclick="handleLogout('admin', true)"
+                            class="w-full bg-teal-600 text-white p-2 rounded">Update</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="student-application" class="hidden h-screen overflow-hidden flex">
+
+        <div id="student-login-view" class="w-full h-screen flex items-center justify-center">
+            <div class="bg-white p-10 rounded-xl shadow-2xl w-full max-w-md">
+                <div class="flex items-center space-x-3 pb-6 border-b border-gray-200 mb-6">
+                    <i data-lucide="graduation-cap" class="w-8 h-8 text-[#108b88]"></i>
+                    <h2 class="text-2xl font-bold text-gray-800">Student Login</h2>
+                </div>
+                <form onsubmit="handleStudentLogin(event)" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Student ID</label>
+                        <input type="text" id="student-login-id" value="233016712"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#108b88] outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="student-login-password" value="pass123"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#108b88] outline-none">
+                    </div>
+                    <button type="submit"
+                        class="w-full py-3 bg-[#108b88] hover:bg-[#0d6e6c] text-white font-bold rounded-xl transition shadow-md">
+                        Enter Student Panel
+                    </button>
+                </form>
+                <p class="text-center text-xs text-gray-400 mt-6">Credentials: 233016712 / pass123</p>
+                <button onclick="showApplication('chooser')"
+                    class="w-full mt-4 text-xs text-teal-600 hover:text-teal-800">Change Portal</button>
+            </div>
+        </div>
+
+        <div id="student-main-content-view" class="hidden h-screen overflow-hidden flex flex-1">
+            <aside class="w-64 bg-[#108b88] flex flex-col shadow-2xl z-20 shrink-0">
+                <div class="p-6 bg-[#0d6e6c] flex items-center gap-3">
+                    <div class="w-8 h-8 bg-white rounded-md flex items-center justify-center text-[#108b88] font-bold">L
+                    </div>
+                    <h1 class="text-xl font-bold text-white tracking-wide">Library System</h1>
+                </div>
+
+                <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                    <div class="student-sidebar-link active" onclick="switchStudentTab('dashboard', this)">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i> <span>Dashboard</span>
+                    </div>
+                    <div class="student-sidebar-link" onclick="switchStudentTab('search', this)">
+                        <i data-lucide="search" class="w-5 h-5 mr-3"></i> <span>Search Books</span>
+                    </div>
+                    <div class="student-sidebar-link" onclick="switchStudentTab('my-books', this)">
+                        <i data-lucide="book-open" class="w-5 h-5 mr-3"></i> <span>My Issued Books</span>
+                    </div>
+                    <div class="student-sidebar-link" onclick="switchStudentTab('profile', this)">
+                        <i data-lucide="user-cog" class="w-5 h-5 mr-3"></i> <span>Profile</span>
+                    </div>
+                    <div class="student-sidebar-link" onclick="switchStudentTab('history', this)">
+                        <i data-lucide="history" class="w-5 h-5 mr-3"></i> <span>Activity History</span>
+                    </div>
+                </nav>
+
+                <div class="p-4 border-t border-[#0d6e6c]">
+                    <button onclick="handleLogout('student')"
+                        class="flex items-center justify-center w-full py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition shadow-lg">
+                        <i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Logout
+                    </button>
+                </div>
+            </aside>
+
+            <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+                <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10">
+                    <h2 id="header-title" class="text-2xl font-bold text-[#108b88]">Dashboard</h2>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right hidden sm:block">
+                            <p class="font-semibold text-sm" id="student-header-name">Loading...</p>
+                            <p class="text-xs text-gray-500" id="student-header-id-display">Student ID: ...</p>
+                        </div>
+                        <div class="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-[#108b88]">
+                            <img id="student-header-avatar" src="" alt="User">
+                        </div>
+                    </div>
+                </header>
+
+                <div id="main-container" class="flex-1 overflow-y-auto p-8 no-scrollbar">
+
+                    <div id="dashboard" class="student-content-section">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div
+                                class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500 flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Issued Books</p>
+                                    <h3 class="text-3xl font-bold">3</h3>
+                                </div>
+                                <div class="p-3 bg-blue-50 rounded-full text-blue-600"><i data-lucide="book"></i></div>
+                            </div>
+                            <div
+                                class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500 flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Pending Returns</p>
+                                    <h3 class="text-3xl font-bold">1</h3>
+                                </div>
+                                <div class="p-3 bg-yellow-50 rounded-full text-yellow-600"><i data-lucide="clock"></i>
+                                </div>
+                            </div>
+                            <div
+                                class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500 flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Total Borrowed</p>
+                                    <h3 class="text-3xl font-bold">12</h3>
+                                </div>
+                                <div class="p-3 bg-green-50 rounded-full text-green-600"><i
+                                        data-lucide="check-circle"></i></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100">
+                                <h3 class="font-semibold text-lg">Currently Issued Books</h3>
+                            </div>
+                            <table class="w-full text-left">
+                                <thead class="bg-gray-50 text-gray-500 text-sm uppercase">
+                                    <tr>
+                                        <th class="px-6 py-3">Book Title</th>
+                                        <th class="px-6 py-3">Author</th>
+                                        <th class="px-6 py-3">Due Date</th>
+                                        <th class="px-6 py-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 text-sm">
+                                    <tr>
+                                        <td class="px-6 py-4 font-medium">Introduction to Algorithms</td>
+                                        <td class="px-6 py-4">Thomas H. Cormen</td>
+                                        <td class="px-6 py-4">2023-12-01</td>
+                                        <td class="px-6 py-4"><span
+                                                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">Active</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 font-medium">Clean Code</td>
+                                        <td class="px-6 py-4">Robert C. Martin</td>
+                                        <td class="px-6 py-4">2023-11-28</td>
+                                        <td class="px-6 py-4"><span
+                                                class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">Expiring
+                                                Soon</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="search" class="student-content-section hidden">
+                        <div class="bg-white p-6 rounded-xl shadow-sm mb-8">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div class="md:col-span-2 relative">
+                                    <i data-lucide="search" class="absolute left-3 top-3 text-gray-400 w-5 h-5"></i>
+                                    <input type="text" placeholder="Search by Title, Author..."
+                                        class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#108b88]">
+                                </div>
+                                <select class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none">
+                                    <option>All Categories</option>
+                                    <option>Computer Science</option>
+                                    <option>Physics</option>
+                                    <option>Literature</option>
+                                </select>
+                                <select class="border border-gray-200 rounded-lg px-4 py-2 focus:outline-none">
+                                    <option>Any Status</option>
+                                    <option>Available</option>
+                                    <option>Out of Stock</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group">
+                                <div class="h-48 bg-gray-200 relative overflow-hidden">
+                                    <div
+                                        class="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500">
+                                        Book Cover</div>
+                                    <div
+                                        class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                                        <button onclick="openModal()"
+                                            class="bg-white text-[#108b88] px-4 py-2 rounded-lg font-semibold opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition">View
+                                            Details</button>
+                                    </div>
+                                </div>
+                                <div class="p-4">
+                                    <span
+                                        class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">CSE</span>
+                                    <h3 class="font-bold mt-2 truncate">Web Development 101</h3>
+                                    <p class="text-sm text-gray-500">Jamil Uddin</p>
+                                    <div class="mt-3 flex items-center justify-between">
+                                        <span class="text-xs text-green-600 font-bold flex items-center"><i
+                                                data-lucide="check" class="w-3 h-3 mr-1"></i> Available</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="my-books" class="student-content-section hidden">
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h3 class="font-bold text-lg mb-4">My Issued Books & Deadlines</h3>
+                            <div class="space-y-4">
+                                <div
+                                    class="flex flex-col md:flex-row items-center justify-between p-4 border border-gray-100 rounded-lg bg-red-50/50">
+                                    <div class="flex items-center gap-4 mb-2 md:mb-0">
+                                        <div
+                                            class="w-12 h-12 bg-gray-200 flex items-center justify-center rounded-md text-red-600">
+                                            <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold">The Great Gatsby</p>
+                                            <p class="text-sm text-gray-500">Due: 2 days left (2023-11-24)</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition">Return</button>
+                                </div>
+                                <div
+                                    class="flex flex-col md:flex-row items-center justify-between p-4 border border-gray-100 rounded-lg">
+                                    <div class="flex items-center gap-4 mb-2 md:mb-0">
+                                        <div
+                                            class="w-12 h-12 bg-gray-200 flex items-center justify-center rounded-md text-blue-600">
+                                            <i data-lucide="book" class="w-6 h-6"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold">Introduction to Algorithms</p>
+                                            <p class="text-sm text-gray-500">Due: 14 days left (2023-12-08)</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition">Return</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="profile" class="student-content-section hidden">
+                        <div class="max-w-2xl bg-white p-8 rounded-xl shadow-sm">
+                            <h3 class="font-bold text-lg mb-6 pb-2 border-b">Profile Management</h3>
+                            <form id="profile-form" class="space-y-6" onsubmit="saveProfile(event)">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label for="profile-name"
+                                            class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                        <input type="text" id="profile-name"
+                                            class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                    </div>
+                                    <div>
+                                        <label for="profile-id"
+                                            class="block text-sm font-medium text-gray-700 mb-2">Student ID</label>
+                                        <input type="text" id="profile-id" disabled
+                                            class="w-full p-3 border border-gray-200 rounded-lg bg-gray-100 cursor-not-allowed text-gray-500">
+                                    </div>
+                                    <div>
+                                        <label for="profile-email"
+                                            class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                        <input type="email" id="profile-email"
+                                            class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                    </div>
+                                    <div>
+                                        <label for="profile-avatar"
+                                            class="block text-sm font-medium text-gray-700 mb-2">Avatar URL
+                                            (Optional)</label>
+                                        <input type="url" id="profile-avatar"
+                                            class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label for="profile-password"
+                                            class="block text-sm font-medium text-gray-700 mb-2">New Password (Leave
+                                            blank to keep current)</label>
+                                        <input type="password" id="profile-password"
+                                            class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                    </div>
+                                </div>
+                                <button type="submit"
+                                    class="w-full py-3 bg-[#108b88] hover:bg-[#0d6e6c] text-white font-bold rounded-xl transition shadow-md flex items-center justify-center space-x-2">
+                                    <i data-lucide="save" class="w-5 h-5"></i> <span>Save Profile Changes</span>
+                                </button>
+                                <p id="profile-message" class="text-sm text-center pt-2"></p>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div id="history" class="student-content-section hidden">
+                        <div class="bg-white rounded-xl shadow-sm p-6">
+                            <h3 class="font-bold text-lg mb-4">Past Borrowing Activity</h3>
+                            <ul class="space-y-4">
+                                <li class="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                                    <div>
+                                        <p class="font-medium">The Lord of the Rings: The Fellowship of the Ring</p>
+                                        <p class="text-sm text-gray-500">Borrowed: 2023-09-01 | Returned: 2023-09-22</p>
+                                    </div>
+                                    <span
+                                        class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">Returned</span>
+                                </li>
+                                <li class="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                                    <div>
+                                        <p class="font-medium">Data Structures and Algorithms in Python</p>
+                                        <p class="text-sm text-gray-500">Borrowed: 2023-07-10 | Returned: 2023-08-01</p>
+                                    </div>
+                                    <span
+                                        class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">Returned</span>
+                                </li>
+                                <li class="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                                    <div>
+                                        <p class="font-medium">Calculus: Early Transcendentals</p>
+                                        <p class="text-sm text-gray-500">Borrowed: 2023-05-15 | Returned: 2023-06-15</p>
+                                    </div>
+                                    <span
+                                        class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">Returned</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="book-modal"
+                    class="fixed inset-0 hidden modal-overlay flex items-center justify-center p-4 z-50">
+                    <div class="bg-white rounded-xl w-full max-w-lg shadow-2xl p-6 relative">
+                        <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700">
+                            <i data-lucide="x" class="w-6 h-6"></i>
+                        </button>
+                        <h3 class="text-2xl font-bold text-[#108b88] mb-4">Book Details</h3>
+                        <div class="space-y-3">
+                            <p><strong>Title:</strong> Web Development 101</p>
+                            <p><strong>Author:</strong> Jamil Uddin</p>
+                            <p><strong>ISBN:</strong> 978-1234567890</p>
+                            <p><strong>Category:</strong> Computer Science</p>
+                            <p><strong>Available Copies:</strong> <span class="text-green-600 font-bold">5</span></p>
+                            <p><strong>Description:</strong> A comprehensive introduction to modern web technologies
+                                including HTML, CSS, and JavaScript.</p>
+                        </div>
+                        <button
+                            class="w-full mt-6 py-3 bg-[#108b88] hover:bg-[#0d6e6c] text-white font-bold rounded-xl transition">
+                            Request Borrow
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Global State ---
+        let currentPanel = 'chooser';
+        let currentUser = null; // Store logged in user info
+
+        // --- API Helper ---
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            try {
+                const response = await fetch('api/' + endpoint, options);
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                showMessage('Error', 'Communication with server failed.', 'error');
+                return null;
+            }
+        }
+
+        // --- Utility Functions ---
+
+        function showMessage(title, message, type) {
+            const box = document.getElementById('message-box');
+            box.innerHTML = `<strong class="font-semibold">${title}:</strong> ${message}`;
+            box.className = 'fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-50 transition-transform duration-300';
+
+            switch (type) {
+                case 'success':
+                    box.classList.add('bg-green-500');
+                    break;
+                case 'error':
+                    box.classList.add('bg-red-500');
+                    break;
+                case 'info':
+                    box.classList.add('bg-blue-500');
+                    break;
+                default:
+                    box.classList.add('bg-gray-500');
+            }
+
+            // Show and hide logic
+            setTimeout(() => {
+                box.classList.add('translate-x-0');
+            }, 10);
+
+            setTimeout(() => {
+                box.classList.remove('translate-x-0');
+                box.classList.add('translate-x-full');
+            }, 3000);
+        }
+
+        function showApplication(mode) {
+            // Hide all main containers
+            document.getElementById('chooser-view').classList.add('hidden');
+            document.getElementById('admin-application').classList.add('hidden');
+            document.getElementById('student-application').classList.add('hidden');
+
+            // Reset body classes
+            document.body.className = 'initial-mode flex justify-center items-center';
+            currentPanel = mode;
+
+            if (mode === 'admin') {
+                document.getElementById('admin-application').classList.remove('hidden');
+                // Check if already logged in (simple session check via localStorage for demo)
+                const adminUser = localStorage.getItem('adminUser');
+                if (adminUser) {
+                    currentUser = JSON.parse(adminUser);
+                    showAdminDashboard();
+                } else {
+                    document.getElementById('admin-login-view').classList.remove('hidden');
+                    document.getElementById('admin-main-content-view').classList.add('hidden');
+                    document.body.classList.remove('initial-mode', 'flex', 'justify-center', 'items-center');
+                    document.body.classList.add('admin-login-mode', 'h-screen');
+                    document.body.classList.add('flex', 'justify-center', 'items-center');
+                }
+
+            } else if (mode === 'student') {
+                document.getElementById('student-application').classList.remove('hidden');
+                const studentUser = localStorage.getItem('studentUser');
+                if (studentUser) {
+                    currentUser = JSON.parse(studentUser);
+                    showStudentDashboard();
+                } else {
+                    document.getElementById('student-login-view').classList.remove('hidden');
+                    document.getElementById('student-main-content-view').classList.add('hidden');
+                    document.body.classList.remove('initial-mode', 'flex', 'justify-center', 'items-center');
+                    document.body.classList.add('student-mode', 'h-screen');
+                    document.body.classList.add('flex', 'justify-center', 'items-center');
+                }
+
+            } else {
+                document.getElementById('chooser-view').classList.remove('hidden');
+                document.body.classList.add('initial-mode', 'flex', 'justify-center', 'items-center');
+            }
+            lucide.createIcons();
+        }
+
+        function handleLogout(panel, update) {
+            if (panel === 'student') {
+                localStorage.removeItem('studentUser');
+                currentUser = null;
+                document.getElementById('student-main-content-view').classList.add('hidden');
+                document.getElementById('student-login-view').classList.remove('hidden');
+                document.body.classList.remove('student-mode', 'flex');
+                document.body.classList.add('initial-mode', 'flex', 'justify-center', 'items-center');
+                showMessage('Student', 'Logout successful.', 'info');
+                showApplication('chooser');
+            }
+            if (panel === 'admin') {
+                localStorage.removeItem('adminUser');
+                currentUser = null;
+                document.getElementById('admin-main-content-view').classList.add('hidden');
+                document.getElementById('admin-login-view').classList.remove('hidden');
+                document.body.classList.remove('admin-dashboard-mode', 'flex');
+                document.body.classList.add('admin-login-mode', 'flex', 'justify-center', 'items-center');
+                showMessage('Admin', update ? 'Password updated and logged out!' : 'Logout successful.', 'info');
+                showApplication('chooser');
+            }
+        }
+
+        // --- ADMIN PANEL LOGIC ---
+
+        async function handleAdminLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+
+            const result = await apiCall('auth.php', 'POST', {
+                action: 'login_admin',
+                email: email,
+                password: password
+            });
+
+            if (result && result.status === 'success') {
+                currentUser = result.user;
+                localStorage.setItem('adminUser', JSON.stringify(currentUser));
+                showMessage('Admin', 'Login successful. Welcome!', 'success');
+                showAdminDashboard();
+            } else {
+                showMessage('Error', result ? result.message : 'Login failed', 'error');
+            }
+        }
+
+        async function showAdminDashboard() {
+            document.getElementById('admin-login-view').classList.add('hidden');
+            document.getElementById('admin-main-content-view').classList.remove('hidden');
+
+            document.body.classList.remove('admin-login-mode', 'flex', 'justify-center', 'items-center');
+            document.body.classList.add('admin-dashboard-mode', 'flex');
+
+            // Update Admin Header
+            document.getElementById('admin-header-name').innerText = currentUser.name;
+            document.getElementById('admin-header-avatar').src = currentUser.avatar || 'https://picsum.photos/40/40?random=1';
+
+            loadAdminStats();
+        }
+
+        async function loadAdminStats() {
+            const stats = await apiCall('dashboard.php?type=admin');
+            if (stats) {
+                document.getElementById('total-books-stat').innerText = stats.total_books;
+                document.getElementById('total-members-stat').innerText = stats.total_members;
+                document.getElementById('books-issued-stat').innerText = stats.books_issued;
+            }
+
+            // Load latest transactions (using same API as transactions list but limited)
+            const transactions = await apiCall('transactions.php');
+            const list = document.getElementById('transaction-list');
+            if (transactions && transactions.length > 0) {
+                list.innerHTML = transactions.slice(0, 5).map(t => `
+                    <div class="flex justify-between items-center py-2 border-b last:border-0">
+                        <div>
+                            <p class="font-medium text-sm">${t.book_title}</p>
+                            <p class="text-xs text-gray-500">Student: ${t.student_id}</p>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full ${t.status === 'issued' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${t.status}</span>
+                    </div>
+                 `).join('');
+            } else {
+                list.innerHTML = '<p class="text-sm text-gray-500">No recent transactions.</p>';
+            }
+        }
+
+        function switchAdminTab(tabId, element) {
+            // Hide all content sections
+            document.querySelectorAll('.admin-content-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show the selected section
+            document.getElementById(tabId + '-content').classList.remove('hidden');
+
+            // Update Sidebar Active State
+            document.querySelectorAll('.sidebar-link').forEach(link => { // Used original .sidebar-link
+                link.classList.remove('active');
+            });
+            element.classList.add('active');
+
+            // Update Header Title
+            const titleMap = {
+                'admin-dashboard': 'Dashboard',
+                'book-management': 'Book Management',
+                'member-management': 'Member Management',
+                'admin-users': 'Admin Users'
+            };
+            document.querySelector('#admin-main-content-view .text-3xl').innerText = titleMap[tabId];
+
+            lucide.createIcons();
+
+            if (tabId === 'book-management') {
+                renderBookList();
+            } else if (tabId === 'member-management') {
+                // Ensure default member subtab is shown
+                switchAdminSubTab('member', 'view', document.querySelector('#member-management-tabs .tab-btn[data-subtab="view"]'));
+                renderMemberList();
+            } else if (tabId === 'admin-users') {
+                // Ensure default admin subtab is shown
+                switchAdminSubTab('admin', 'add-multiple', document.querySelector('#admin-users-tabs .tab-btn[data-subtab="add-multiple"]'));
+            }
+        }
+
+        function switchAdminSubTab(parent, subTabId, element) {
+            // Deactivate all subtab buttons for this parent
+            document.querySelectorAll(`#${parent}-management-tabs .tab-btn, #${parent}-users-tabs .tab-btn`).forEach(btn => {
+                btn.classList.remove('active', 'border-b-2', 'border-teal-600', 'font-semibold', 'text-teal-600');
+                btn.classList.add('text-gray-500', 'hover:text-teal-600');
+            });
+
+            // Activate the clicked button
+            element.classList.add('active', 'border-b-2', 'border-teal-600', 'font-semibold', 'text-teal-600');
+            element.classList.remove('text-gray-500', 'hover:text-teal-600');
+
+            // Hide all subtab content sections for this parent
+            document.querySelectorAll(`.${parent}-subtab-content`).forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Show the selected subtab content
+            document.getElementById(`${parent}-${subTabId}-tab`).classList.remove('hidden');
+        }
+
+        // --- BOOK MANAGEMENT ---
+
+        async function saveBook(event) {
+            event.preventDefault();
+            const title = document.getElementById('book-title').value;
+            const author = document.getElementById('book-author').value;
+            const isbn = document.getElementById('book-isbn').value;
+            const quantity = parseInt(document.getElementById('book-quantity').value);
+
+            const result = await apiCall('books.php', 'POST', {
+                title, author, isbn, quantity
+            });
+
+            if (result && result.status === 'success') {
+                renderBookList();
+                document.getElementById('add-book-form').reset();
+                showMessage('Success', `Book "${title}" added.`, 'success');
+            } else {
+                showMessage('Error', result ? result.message : 'Failed to add book', 'error');
+            }
+        }
+
+        async function renderBookList() {
+            const container = document.getElementById('book-management-list');
+            container.innerHTML = 'Loading...';
+
+            const books = await apiCall('books.php');
+
+            if (!books || books.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No books in catalog.</p>';
+                return;
+            }
+
+            let html = `
+                <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Author</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISBN</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avail</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            books.forEach(book => {
+                html += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${book.title}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${book.author}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${book.isbn}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-teal-600">${book.quantity}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm ${book.available > 0 ? 'text-green-600' : 'text-red-600'} font-bold">${book.available}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="deleteBook(${book.id})" class="text-red-600 hover:text-red-900 ml-2">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        async function deleteBook(id) {
+            if (!confirm('Are you sure you want to delete this book?')) return;
+
+            const result = await apiCall('books.php', 'DELETE', { id: id });
+
+            if (result && result.status === 'success') {
+                renderBookList();
+                showMessage('Deleted', 'Book removed successfully.', 'info');
+            } else {
+                showMessage('Error', result ? result.message : 'Failed to delete book', 'error');
+            }
+        }
+
+        // --- MEMBER MANAGEMENT ---
+
+        async function renderMemberList() {
+            const container = document.getElementById('member-view-list');
+            container.innerHTML = 'Loading...';
+            const members = await apiCall('students.php');
+
+            if (!members || members.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No members found.</p>';
+                return;
+            }
+
+            let html = `
+                <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg. Date</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            members.forEach(m => {
+                html += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">${m.student_id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500">${m.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500">${m.email}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-gray-500">${m.created_at || '-'}</td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+        }
+
+        async function addMember(event) {
+            event.preventDefault();
+            const name = document.getElementById('member-name').value;
+            const student_id = document.getElementById('member-id').value;
+            const email = document.getElementById('member-email').value;
+            const password = document.getElementById('member-password').value;
+
+            const result = await apiCall('students.php', 'POST', {
+                name, student_id, email, password
+            });
+
+            if (result && result.status === 'success') {
+                renderMemberList();
+                document.getElementById('add-member-form').reset();
+                showMessage('Success', `Member "${name}" added.`, 'success');
+            } else {
+                showMessage('Error', result ? result.message : 'Failed to add member', 'error');
+            }
+        }
+
+
+        // --- STUDENT PANEL LOGIC ---
+
+        async function handleStudentLogin(event) {
+            event.preventDefault();
+            const studentId = document.getElementById('student-login-id').value;
+            const password = document.getElementById('student-login-password').value;
+
+            const result = await apiCall('auth.php', 'POST', {
+                action: 'login_student',
+                student_id: studentId,
+                password: password
+            });
+
+            if (result && result.status === 'success') {
+                currentUser = result.user;
+                localStorage.setItem('studentUser', JSON.stringify(currentUser));
+                showMessage('Student', 'Login successful. Welcome!', 'success');
+                showStudentDashboard();
+            } else {
+                showMessage('Error', result ? result.message : 'Login failed', 'error');
+            }
+        }
+
+        async function showStudentDashboard() {
+            document.getElementById('student-login-view').classList.add('hidden');
+            document.getElementById('student-main-content-view').classList.remove('hidden');
+
+            document.body.classList.remove('student-mode', 'flex', 'justify-center', 'items-center');
+            document.body.classList.add('student-mode', 'h-screen');
+
+            // Update Header
+            document.getElementById('student-header-name').innerText = currentUser.name;
+            document.getElementById('student-header-id-display').innerText = 'Student ID: ' + currentUser.student_id;
+            document.getElementById('student-header-avatar').src = currentUser.avatar || 'https://i.pravatar.cc/150?u=' + currentUser.student_id;
+            // Load Dashboard Stats
+            loadStudentStats();
+        }
+
+        async function loadAdminStats() {
+            const stats = await apiCall('dashboard.php?type=admin');
+            if (stats) {
+                // Update stats cards
+                const statCards = document.querySelectorAll('#admin-dashboard .bg-white.rounded-xl.shadow-sm.p-6');
+                if (statCards.length >= 3) {
+                    statCards[0].querySelector('h3').innerText = stats.total_books;
+                    statCards[1].querySelector('h3').innerText = stats.total_members;
+                    statCards[2].querySelector('h3').innerText = stats.books_issued;
+                }
+            }
+
+            renderPendingRequests();
+        }
+
+        async function renderPendingRequests() {
+            // We'll use the transactions API to get all transactions and filter client-side for now,
+            // or update API to support filtering. Let's fetch all (limit 50) and filter.
+            const transactions = await apiCall('transactions.php');
+            const container = document.getElementById('admin-dashboard-pending'); // We need to create this container in HTML first
+
+            // Since we don't have a dedicated container in the original HTML, let's inject one or use the existing table.
+            // Actually, let's replace the "Recent Transactions" table with two tables: Pending and Recent.
+            // For simplicity in this edit, I will modify the "Recent Transactions" table to show Pending requests at the top with actions.
+
+            const tbody = document.querySelector('#admin-dashboard table tbody');
+            if (!transactions || transactions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No transactions found.</td></tr>';
+                return;
+            }
+
+            // Separate pending and others
+            const pending = transactions.filter(t => t.status === 'requested');
+            const others = transactions.filter(t => t.status !== 'requested');
+
+            let html = '';
+
+            // Render Pending
+            if (pending.length > 0) {
+                html += `<tr><td colspan="5" class="px-6 py-2 bg-yellow-50 text-yellow-800 font-bold">Pending Requests</td></tr>`;
+                pending.forEach(t => {
+                    html += `
+                        <tr class="bg-yellow-50">
+                            <td class="px-6 py-4 font-medium">${t.book_title}</td>
+                            <td class="px-6 py-4">${t.student_id}</td>
+                            <td class="px-6 py-4">${t.issue_date}</td>
+                            <td class="px-6 py-4"><span class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs">Pending</span></td>
+                            <td class="px-6 py-4">
+                                <button onclick="handleApproval(${t.id}, 'approve')" class="text-green-600 hover:text-green-900 mr-2 font-bold">Approve</button>
+                                <button onclick="handleApproval(${t.id}, 'reject')" class="text-red-600 hover:text-red-900 font-bold">Reject</button>
+                            </td>
+                        </tr>
+                `;
+                });
+            }
+
+            // Render Others
+            if (others.length > 0) {
+                html += `<tr><td colspan="5" class="px-6 py-2 bg-gray-50 text-gray-800 font-bold">Recent History</td></tr>`;
+                others.forEach(t => {
+                    html += `
+                        <tr>
+                            <td class="px-6 py-4 font-medium">${t.book_title}</td>
+                            <td class="px-6 py-4">${t.student_id}</td>
+                            <td class="px-6 py-4">${t.issue_date}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded-full text-xs capitalize
+                                    ${t.status === 'issued' ? 'bg-green-100 text-green-700' :
+                            t.status === 'returned' ? 'bg-blue-100 text-blue-700' :
+                                t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">
+                                    ${t.status}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-gray-400">-</td>
+                        </tr>
+                `;
+                });
+            }
+
+            tbody.innerHTML = html;
+        }
+
+        async function handleApproval(transactionId, action) {
+            if (!confirm(`Are you sure you want to ${action} this request?`)) return;
+
+            const result = await apiCall('transactions.php', 'POST', {
+                action: action,
+                transaction_id: transactionId
+            });
+
+            if (result && result.status === 'success') {
+                showMessage('Success', `Request ${action}d.`, 'success');
+                loadAdminStats(); // Reload to update list
+            } else {
+                showMessage('Error', result ? result.message : 'Action failed', 'error');
+            }
+        }
+
+        function renderRecentTransactions() {
+            // Merged into renderPendingRequests for now to use the single table
+        }
+        async function renderStudentSearch() {
+            const container = document.querySelector('#search .grid.gap-6');
+            container.innerHTML = 'Loading...';
+
+            const books = await apiCall('books.php');
+            if (books && books.length > 0) {
+                container.innerHTML = books.map(book => `
+                    <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden group">
+                        <div class="h-48 bg-gray-200 relative overflow-hidden">
+                            <div class="w-full h-full flex items-center justify-center bg-gray-300 text-gray-500">Book Cover</div>
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition flex items-center justify-center">
+                                <button onclick="openBookModal('${book.isbn}')" class="bg-white text-[#108b88] px-4 py-2 rounded-lg font-semibold opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition">View Details</button>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">Book</span>
+                            <h3 class="font-bold mt-2 truncate">${book.title}</h3>
+                            <p class="text-sm text-gray-500">${book.author}</p>
+                            <div class="mt-3 flex items-center justify-between">
+                                <span class="text-xs ${book.available > 0 ? 'text-green-600' : 'text-red-600'} font-bold flex items-center">
+                                    <i data-lucide="${book.available > 0 ? 'check' : 'x'}" class="w-3 h-3 mr-1"></i> ${book.available > 0 ? 'Available' : 'Out of Stock'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            } else {
+                container.innerHTML = '<p class="col-span-full text-center text-gray-500">No books found.</p>';
+            }
+        }
+
+        async function renderMyBooks() {
+            const container = document.querySelector('#my-books .space-y-4');
+            container.innerHTML = 'Loading...';
+
+            const transactions = await apiCall(`transactions.php?student_id=${currentUser.student_id}`);
+            if (transactions && transactions.length > 0) {
+                // Show both issued and requested (pending) books
+                const active = transactions.filter(t => t.status === 'issued' || t.status === 'requested');
+
+                if (active.length > 0) {
+                    container.innerHTML = active.map(t => `
+                        <div class="flex flex-col md:flex-row items-center justify-between p-4 border border-gray-100 rounded-lg">
+                            <div class="flex items-center gap-4 mb-2 md:mb-0">
+                                <div class="w-12 h-12 bg-gray-200 flex items-center justify-center rounded-md text-blue-600"><i data-lucide="book" class="w-6 h-6"></i></div>
+                                <div>
+                                    <p class="font-semibold">${t.book_title}</p>
+                                    <p class="text-sm text-gray-500">
+                                        ${t.status === 'requested' ? '<span class="text-yellow-600 font-bold">Pending Approval</span>' : 'Due: ' + t.due_date}
+                                    </p>
+                                </div>
+                            </div>
+                            ${t.status === 'issued' ?
+                            `<button onclick="returnBook(${t.id})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition">Return</button>` :
+                            `<span class="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg text-sm font-medium">Waiting</span>`
+                        }
+                        </div>
+                    `).join('');
+                    lucide.createIcons();
+                } else {
+                    container.innerHTML = '<p class="text-gray-500">No active books.</p>';
+                }
+            } else {
+                container.innerHTML = '<p class="text-gray-500">No active books.</p>';
+            }
+        }
+
+        async function returnBook(transactionId) {
+            if (!confirm('Are you sure you want to return this book?')) return;
+
+            const result = await apiCall('transactions.php', 'POST', {
+                action: 'return',
+                transaction_id: transactionId
+            });
+
+            if (result && result.status === 'success') {
+                showMessage('Success', 'Book returned successfully.', 'success');
+                renderMyBooks();
+            } else {
+                showMessage('Error', result ? result.message : 'Failed to return book', 'error');
+            }
+        }
+
+        async function renderHistory() {
+            const container = document.querySelector('#history ul');
+            container.innerHTML = 'Loading...';
+
+            const transactions = await apiCall(`transactions.php?student_id=${currentUser.student_id}`);
+            if (transactions && transactions.length > 0) {
+                container.innerHTML = transactions.map(t => `
+                    <li class="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
+                        <div>
+                            <p class="font-medium">${t.book_title}</p>
+                            <p class="text-sm text-gray-500">Issued: ${t.issue_date} | ${t.return_date ? 'Returned: ' + t.return_date : 'Due: ' + t.due_date}</p>
+                        </div>
+                        <span class="px-3 py-1 ${t.status === 'returned' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs capitalize">${t.status}</span>
+                    </li>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500">No history found.</p>';
+            }
+        }
+
+        function loadProfile() {
+            document.getElementById('profile-name').value = currentUser.name;
+            document.getElementById('profile-id').value = currentUser.student_id;
+            document.getElementById('profile-email').value = currentUser.email;
+            document.getElementById('profile-avatar').value = currentUser.avatar || '';
+        }
+
+        async function saveProfile(event) {
+            event.preventDefault();
+            const name = document.getElementById('profile-name').value;
+            const email = document.getElementById('profile-email').value;
+            const avatar = document.getElementById('profile-avatar').value;
+            const password = document.getElementById('profile-password').value;
+
+            const data = {
+                student_id: currentUser.student_id,
+                name, email, avatar, password
+            };
+
+            const result = await apiCall('students.php', 'PUT', data);
+
+            if (result && result.status === 'success') {
+                showMessage('Success', 'Profile updated.', 'success');
+                // Update local user data
+                currentUser.name = name;
+                currentUser.email = email;
+                currentUser.avatar = avatar;
+                localStorage.setItem('studentUser', JSON.stringify(currentUser));
+                // Update header
+                document.getElementById('student-header-name').innerText = name;
+                if (avatar) document.getElementById('student-header-avatar').src = avatar;
+            } else {
+                showMessage('Error', result ? result.message : 'Update failed', 'error');
+            }
+        }
+
+        // Modal Logic
+        let currentBookIsbn = null;
+        async function openBookModal(isbn) {
+            const books = await apiCall('books.php');
+            const book = books.find(b => b.isbn === isbn);
+
+            if (book) {
+                currentBookIsbn = isbn;
+                const modal = document.getElementById('book-modal');
+                modal.querySelector('h3').innerText = book.title;
+                const details = modal.querySelector('.space-y-3');
+                details.innerHTML = `
+                < p > <strong>Title:</strong> ${book.title}</p >
+                    <p><strong>Author:</strong> ${book.author}</p>
+                    <p><strong>ISBN:</strong> ${book.isbn}</p>
+                    <p><strong>Available Copies:</strong> <span class="text-green-600 font-bold">${book.available}</span></p>
+                `;
+
+                // Update button action
+                const btn = modal.querySelector('button.w-full');
+                btn.onclick = () => requestBorrow(book.isbn);
+
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('book-modal').classList.add('hidden');
+        }
+
+        async function requestBorrow(isbn) {
+            const result = await apiCall('transactions.php', 'POST', {
+                action: 'issue',
+                student_id: currentUser.student_id,
+                isbn: isbn
+            });
+
+            if (result && result.status === 'success') {
+                showMessage('Success', 'Book issued successfully!', 'success');
+                closeModal();
+                renderStudentSearch(); // Update availability
+            } else {
+                showMessage('Error', result ? result.message : 'Failed to issue book', 'error');
+            }
+        }
+
+        function switchStudentTab(tabId, element) {
+            // Update Sidebar
+            document.querySelectorAll('.student-sidebar-link').forEach(link => link.classList.remove('active'));
+            element.classList.add('active');
+
+            // Hide all sections
+            document.querySelectorAll('.student-content-section').forEach(section => section.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            // Update Header
+            const titleMap = {
+                'dashboard': 'Dashboard',
+                'search': 'Search Books',
+                'my-books': 'My Issued Books',
+                'profile': 'Profile',
+                'history': 'Activity History'
+            };
+            document.getElementById('header-title').innerText = titleMap[tabId];
+
+            if (tabId === 'dashboard') {
+                loadStudentStats(); // Reload stats
+            } else if (tabId === 'search') {
+                renderStudentSearch();
+            } else if (tabId === 'my-books') {
+                renderMyBooks();
+            } else if (tabId === 'history') {
+                renderHistory();
+            } else if (tabId === 'profile') {
+                loadProfile();
+            }
+        }
+
+        // Initial icon creation
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
