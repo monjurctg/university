@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $host = '127.0.0.1';
 $db_name = 'library_system';
 $username = 'root';
-$password = '1234';
+$password = '';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db_name", $username, $password);

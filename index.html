@@ -209,10 +209,7 @@
                         class="sidebar-link w-full flex items-center space-x-3 p-3 rounded-xl transition">
                         <i data-lucide="users"></i> <span>Members</span>
                     </button>
-                    <button onclick="switchAdminTab('admin-users', this)"
-                        class="sidebar-link w-full flex items-center space-x-3 p-3 rounded-xl transition">
-                        <i data-lucide="shield"></i> <span>Admins</span>
-                    </button>
+
                 </nav>
                 <button onclick="handleLogout('admin', false)"
                     class="mt-auto flex items-center justify-center space-x-2 py-3 bg-red-500 hover:bg-red-600 rounded-xl transition">
@@ -1438,6 +1435,42 @@
 
         // Initial icon creation
         lucide.createIcons();
+
+        // Auto-restore session on page load: if adminUser or studentUser exists in localStorage,
+        // show the corresponding application and dashboard so a reload doesn't show the chooser again.
+        window.addEventListener('DOMContentLoaded', () => {
+            const adminUser = localStorage.getItem('adminUser');
+            const studentUser = localStorage.getItem('studentUser');
+
+            if (adminUser) {
+                currentUser = JSON.parse(adminUser);
+                // Show admin application and ensure dashboard view is active
+                document.getElementById('chooser-view').classList.add('hidden');
+                document.getElementById('admin-application').classList.remove('hidden');
+                document.getElementById('admin-login-view').classList.add('hidden');
+                document.getElementById('admin-main-content-view').classList.remove('hidden');
+                // Ensure body classes are correct for admin dashboard
+                document.body.classList.remove('initial-mode', 'flex', 'justify-center', 'items-center', 'admin-login-mode');
+                document.body.classList.add('admin-dashboard-mode', 'flex');
+                showAdminDashboard();
+            } else if (studentUser) {
+                currentUser = JSON.parse(studentUser);
+                // Show student application and ensure main view is active
+                document.getElementById('chooser-view').classList.add('hidden');
+                document.getElementById('student-application').classList.remove('hidden');
+                document.getElementById('student-login-view').classList.add('hidden');
+                document.getElementById('student-main-content-view').classList.remove('hidden');
+                // Ensure body classes are correct for student dashboard
+                document.body.classList.remove('initial-mode', 'flex', 'justify-center', 'items-center');
+                document.body.classList.add('student-mode', 'h-screen');
+                showStudentDashboard();
+            } else {
+                // Default chooser remains visible
+                document.getElementById('chooser-view').classList.remove('hidden');
+            }
+            // recreate icons if needed
+            lucide.createIcons();
+        });
     </script>
 </body>
 
