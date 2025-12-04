@@ -247,6 +247,12 @@
                     </div>
 
                     <div class="bg-white p-6 rounded-xl shadow">
+                        <h3 class="text-lg font-bold text-gray-700 mb-4">Pending Requests</h3>
+                        <div id="admin-dashboard-pending">
+                            <p class="text-sm text-gray-500">Loading pending requests...</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow">
                         <h3 class="text-lg font-bold text-gray-700 mb-4">Latest Transactions</h3>
                         <div id="transaction-list">
                             <p class="text-sm text-gray-500">No recent transactions.</p>
@@ -853,22 +859,29 @@
         async function loadAdminStats() {
             const stats = await apiCall('dashboard.php?type=admin');
             if (stats) {
-                document.getElementById('total-books-stat').innerText = stats.total_books;
-                document.getElementById('total-members-stat').innerText = stats.total_members;
-                document.getElementById('books-issued-stat').innerText = stats.books_issued;
+                document.getElementById('total-books-stat').innerText = stats.total_books || 0;
+                document.getElementById('total-members-stat').innerText = stats.total_members || 0;
+                document.getElementById('books-issued-stat').innerText = stats.books_issued || 0;
             }
 
             // Load latest transactions (using same API as transactions list but limited)
             const transactions = await apiCall('transactions.php');
             const list = document.getElementById('transaction-list');
             if (transactions && transactions.length > 0) {
-                list.innerHTML = transactions.slice(0, 5).map(t => `
+                // Filter out pending requests to show only completed transactions
+                const completedTransactions = transactions.filter(t => t.status !== 'requested');
+                list.innerHTML = completedTransactions.slice(0, 5).map(t => `
                     <div class="flex justify-between items-center py-2 border-b last:border-0">
                         <div>
                             <p class="font-medium text-sm">${t.book_title}</p>
                             <p class="text-xs text-gray-500">Student: ${t.student_id}</p>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded-full ${t.status === 'issued' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">${t.status}</span>
+                        <span class="text-xs px-2 py-1 rounded-full
+                            ${t.status === 'issued' ? 'bg-yellow-100 text-yellow-700' :
+                              t.status === 'returned' ? 'bg-green-100 text-green-700' :
+                              t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">
+                            ${t.status}
+                        </span>
                     </div>
                  `).join('');
             } else {
@@ -902,7 +915,10 @@
 
             lucide.createIcons();
 
-            if (tabId === 'book-management') {
+            if (tabId === 'admin-dashboard') {
+                loadAdminStats();
+                renderPendingRequests();
+            } else if (tabId === 'book-management') {
                 renderBookList();
             } else if (tabId === 'member-management') {
                 // Ensure default member subtab is shown
@@ -1114,16 +1130,68 @@
             loadStudentStats();
         }
 
+        async function loadStudentStats() {
+            const stats = await apiCall(`dashboard.php?type=student&student_id=${currentUser.student_id}`);
+            if (stats) {
+                // Update student dashboard stats
+                const statCards = document.querySelectorAll('#dashboard .bg-white.rounded-xl.shadow-sm.border-l-4');
+                if (statCards.length >= 3) {
+                    statCards[0].querySelector('h3').innerText = stats.issued_books || 0;
+                    statCards[1].querySelector('h3').innerText = stats.pending_returns || 0;
+                    statCards[2].querySelector('h3').innerText = stats.total_borrowed || 0;
+                }
+            }
+
+            // Load currently issued books
+            renderCurrentlyIssuedBooks();
+        }
+
+        async function renderCurrentlyIssuedBooks() {
+            const container = document.querySelector('#dashboard table tbody');
+            if (!container) return;
+
+            const transactions = await apiCall(`transactions.php?student_id=${currentUser.student_id}`);
+            if (transactions && transactions.length > 0) {
+                // Filter only issued books
+                const issuedBooks = transactions.filter(t => t.status === 'issued');
+
+                if (issuedBooks.length > 0) {
+                    container.innerHTML = issuedBooks.map(t => `
+                        <tr>
+                            <td class="px-6 py-4 font-medium">${t.book_title}</td>
+                            <td class="px-6 py-4">${t.book_author}</td>
+                            <td class="px-6 py-4">${t.due_date}</td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded-full text-xs
+                                    ${isExpiringSoon(t.due_date) ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}">
+                                    ${isExpiringSoon(t.due_date) ? 'Expiring Soon' : 'Active'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No currently issued books.</td></tr>';
+                }
+            } else {
+                container.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No currently issued books.</td></tr>';
+            }
+        }
+
+        function isExpiringSoon(dueDateStr) {
+            const dueDate = new Date(dueDateStr);
+            const today = new Date();
+            const diffTime = dueDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays <= 3 && diffDays >= 0; // Expiring within 3 days
+        }
+
         async function loadAdminStats() {
             const stats = await apiCall('dashboard.php?type=admin');
             if (stats) {
-                // Update stats cards
-                const statCards = document.querySelectorAll('#admin-dashboard .bg-white.rounded-xl.shadow-sm.p-6');
-                if (statCards.length >= 3) {
-                    statCards[0].querySelector('h3').innerText = stats.total_books;
-                    statCards[1].querySelector('h3').innerText = stats.total_members;
-                    statCards[2].querySelector('h3').innerText = stats.books_issued;
-                }
+                // Update stats cards using direct element IDs
+                document.getElementById('total-books-stat').innerText = stats.total_books || 0;
+                document.getElementById('total-members-stat').innerText = stats.total_members || 0;
+                document.getElementById('books-issued-stat').innerText = stats.books_issued || 0;
             }
 
             renderPendingRequests();
@@ -1133,67 +1201,58 @@
             // We'll use the transactions API to get all transactions and filter client-side for now,
             // or update API to support filtering. Let's fetch all (limit 50) and filter.
             const transactions = await apiCall('transactions.php');
-            const container = document.getElementById('admin-dashboard-pending'); // We need to create this container in HTML first
+            const container = document.getElementById('admin-dashboard-pending');
 
-            // Since we don't have a dedicated container in the original HTML, let's inject one or use the existing table.
-            // Actually, let's replace the "Recent Transactions" table with two tables: Pending and Recent.
-            // For simplicity in this edit, I will modify the "Recent Transactions" table to show Pending requests at the top with actions.
-
-            const tbody = document.querySelector('#admin-dashboard table tbody');
-            if (!transactions || transactions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No transactions found.</td></tr>';
+            if (!container) {
+                console.error('Pending requests container not found');
                 return;
             }
 
-            // Separate pending and others
+            if (!transactions || transactions.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500">No pending requests found.</p>';
+                return;
+            }
+
+            // Filter pending requests
             const pending = transactions.filter(t => t.status === 'requested');
-            const others = transactions.filter(t => t.status !== 'requested');
 
-            let html = '';
-
-            // Render Pending
-            if (pending.length > 0) {
-                html += `<tr><td colspan="5" class="px-6 py-2 bg-yellow-50 text-yellow-800 font-bold">Pending Requests</td></tr>`;
-                pending.forEach(t => {
-                    html += `
-                        <tr class="bg-yellow-50">
-                            <td class="px-6 py-4 font-medium">${t.book_title}</td>
-                            <td class="px-6 py-4">${t.student_id}</td>
-                            <td class="px-6 py-4">${t.issue_date}</td>
-                            <td class="px-6 py-4"><span class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs">Pending</span></td>
-                            <td class="px-6 py-4">
-                                <button onclick="handleApproval(${t.id}, 'approve')" class="text-green-600 hover:text-green-900 mr-2 font-bold">Approve</button>
-                                <button onclick="handleApproval(${t.id}, 'reject')" class="text-red-600 hover:text-red-900 font-bold">Reject</button>
-                            </td>
-                        </tr>
-                `;
-                });
+            if (pending.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500">No pending requests found.</p>';
+                return;
             }
 
-            // Render Others
-            if (others.length > 0) {
-                html += `<tr><td colspan="5" class="px-6 py-2 bg-gray-50 text-gray-800 font-bold">Recent History</td></tr>`;
-                others.forEach(t => {
-                    html += `
-                        <tr>
-                            <td class="px-6 py-4 font-medium">${t.book_title}</td>
-                            <td class="px-6 py-4">${t.student_id}</td>
-                            <td class="px-6 py-4">${t.issue_date}</td>
-                            <td class="px-6 py-4">
-                                <span class="px-3 py-1 rounded-full text-xs capitalize
-                                    ${t.status === 'issued' ? 'bg-green-100 text-green-700' :
-                            t.status === 'returned' ? 'bg-blue-100 text-blue-700' :
-                                t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">
-                                    ${t.status}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 text-gray-400">-</td>
-                        </tr>
-                `;
-                });
-            }
+            let html = `
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Book Title</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+            `;
 
-            tbody.innerHTML = html;
+            pending.forEach(t => {
+                html += `
+                    <tr class="bg-yellow-50">
+                        <td class="px-6 py-4 font-medium">${t.book_title}</td>
+                        <td class="px-6 py-4">${t.student_id}</td>
+                        <td class="px-6 py-4">${t.issue_date}</td>
+                        <td class="px-6 py-4"><span class="px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs">Pending</span></td>
+                        <td class="px-6 py-4">
+                            <button onclick="handleApproval(${t.id}, 'approve')" class="text-green-600 hover:text-green-900 mr-2 font-bold">Approve</button>
+                            <button onclick="handleApproval(${t.id}, 'reject')" class="text-red-600 hover:text-red-900 font-bold">Reject</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
         }
 
         async function handleApproval(transactionId, action) {
@@ -1206,7 +1265,8 @@
 
             if (result && result.status === 'success') {
                 showMessage('Success', `Request ${action}d.`, 'success');
-                loadAdminStats(); // Reload to update list
+                loadAdminStats(); // Reload stats
+                renderPendingRequests(); // Refresh the pending requests list
             } else {
                 showMessage('Error', result ? result.message : 'Action failed', 'error');
             }
