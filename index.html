@@ -709,8 +709,13 @@
                 options.body = JSON.stringify(data);
             }
             try {
+
                 const response = await fetch('api/' + endpoint, options);
-                return await response.json();
+
+                const jsonData = await response.json();
+
+
+                return jsonData;
             } catch (error) {
                 console.error('API Error:', error);
                 showMessage('Error', 'Communication with server failed.', 'error');
@@ -836,13 +841,14 @@
                 currentUser = result.user;
                 localStorage.setItem('adminUser', JSON.stringify(currentUser));
                 showMessage('Admin', 'Login successful. Welcome!', 'success');
-                showAdminDashboard();
+                await showAdminDashboard();
             } else {
                 showMessage('Error', result ? result.message : 'Login failed', 'error');
             }
         }
 
         async function showAdminDashboard() {
+            console.log('Showing admin dashboard...');
             document.getElementById('admin-login-view').classList.add('hidden');
             document.getElementById('admin-main-content-view').classList.remove('hidden');
 
@@ -853,11 +859,16 @@
             document.getElementById('admin-header-name').innerText = currentUser.name;
             document.getElementById('admin-header-avatar').src = currentUser.avatar || 'https://picsum.photos/40/40?random=1';
 
-            loadAdminStats();
+            console.log('Calling loadAdminStats...');
+            await loadAdminStats();
+            renderPendingRequests();
+
         }
 
         async function loadAdminStats() {
+            console.log("Loading....")
             const stats = await apiCall('dashboard.php?type=admin');
+
             if (stats) {
                 document.getElementById('total-books-stat').innerText = stats.total_books || 0;
                 document.getElementById('total-members-stat').innerText = stats.total_members || 0;
@@ -865,27 +876,66 @@
             }
 
             // Load latest transactions (using same API as transactions list but limited)
-            const transactions = await apiCall('transactions.php');
-            const list = document.getElementById('transaction-list');
-            if (transactions && transactions.length > 0) {
-                // Filter out pending requests to show only completed transactions
-                const completedTransactions = transactions.filter(t => t.status !== 'requested');
-                list.innerHTML = completedTransactions.slice(0, 5).map(t => `
-                    <div class="flex justify-between items-center py-2 border-b last:border-0">
-                        <div>
-                            <p class="font-medium text-sm">${t.book_title}</p>
-                            <p class="text-xs text-gray-500">Student: ${t.student_id}</p>
-                        </div>
-                        <span class="text-xs px-2 py-1 rounded-full
-                            ${t.status === 'issued' ? 'bg-yellow-100 text-yellow-700' :
-                              t.status === 'returned' ? 'bg-green-100 text-green-700' :
-                              t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">
-                            ${t.status}
-                        </span>
-                    </div>
-                 `).join('');
-            } else {
-                list.innerHTML = '<p class="text-sm text-gray-500">No recent transactions.</p>';
+            try {
+
+                const transactions = await apiCall('transactions.php');
+                console.log('Transactions data:', transactions); // Debug log
+                const list = document.getElementById('transaction-list');
+                console.log('Transaction list element:', list);
+
+                // Log fetch result
+                console.log('Raw transactions result:', transactions);
+
+                if (transactions && transactions.length > 0) {
+                    console.log('Processing transactions:', transactions);
+                    // Show all transactions including pending requests
+                    // Sort by issue_date descending to show latest first
+                    const sortedTransactions = transactions.sort((a, b) => {
+                        // Handle potential date parsing issues
+                        const dateA = new Date(a.issue_date);
+                        const dateB = new Date(b.issue_date);
+
+                        console.log('Comparing dates:', a.issue_date, 'vs', b.issue_date);
+                        console.log('Parsed dates:', dateA, 'vs', dateB);
+
+                        // If either date is invalid, put invalid dates at the end
+                        if (isNaN(dateA.getTime()) && isNaN(dateB.getTime())) return 0;
+                        if (isNaN(dateA.getTime())) return 1;
+                        if (isNaN(dateB.getTime())) return -1;
+
+                        return dateB - dateA;
+                    });
+
+                    console.log('Sorted transactions:', sortedTransactions);
+
+                    // Take only first 5 transactions
+                    const displayTransactions = sortedTransactions.slice(0, 5);
+                    console.log('Displaying transactions:', displayTransactions);
+
+                    list.innerHTML = displayTransactions.map(t =>
+                        `<div class="flex justify-between items-center py-2 border-b last:border-0">
+                            <div>
+                                <p class="font-medium text-sm">${t.book_title || 'Unknown Book'}</p>
+                                <p class="text-xs text-gray-500">Student: ${t.student_id || 'Unknown'}</p>
+                                <p class="text-xs text-gray-400">${t.issue_date || 'Unknown Date'}</p>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full ${t.status === 'requested' ? 'bg-yellow-100 text-yellow-700' : t.status === 'issued' ? 'bg-blue-100 text-blue-700' : t.status === 'returned' ? 'bg-green-100 text-green-700' : t.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}">
+                                ${t.status || 'unknown'}
+                            </span>
+                        </div>`
+                    ).join('');
+
+                    console.log('Transaction list HTML:', list.innerHTML);
+                } else {
+                    list.innerHTML = '<p class="text-sm text-gray-500">No recent transactions.</p>';
+                    console.log('No transactions to display');
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+                const list = document.getElementById('transaction-list');
+                if (list) {
+                    list.innerHTML = '<p class="text-sm text-red-500">Error loading transactions.</p>';
+                }
             }
         }
 
@@ -1185,17 +1235,17 @@
             return diffDays <= 3 && diffDays >= 0; // Expiring within 3 days
         }
 
-        async function loadAdminStats() {
-            const stats = await apiCall('dashboard.php?type=admin');
-            if (stats) {
-                // Update stats cards using direct element IDs
-                document.getElementById('total-books-stat').innerText = stats.total_books || 0;
-                document.getElementById('total-members-stat').innerText = stats.total_members || 0;
-                document.getElementById('books-issued-stat').innerText = stats.books_issued || 0;
-            }
+        // async function loadAdminStats() {
+        //     const stats = await apiCall('dashboard.php?type=admin');
+        //     if (stats) {
+        //         // Update stats cards using direct element IDs
+        //         document.getElementById('total-books-stat').innerText = stats.total_books || 0;
+        //         document.getElementById('total-members-stat').innerText = stats.total_members || 0;
+        //         document.getElementById('books-issued-stat').innerText = stats.books_issued || 0;
+        //     }
 
-            renderPendingRequests();
-        }
+
+        // }
 
         async function renderPendingRequests() {
             // We'll use the transactions API to get all transactions and filter client-side for now,
