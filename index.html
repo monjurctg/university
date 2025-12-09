@@ -182,7 +182,7 @@
                         Sign In to Dashboard
                     </button>
                 </form>
-                <p class="text-center text-xs text-gray-400 mt-6">Credentials: admin@lms.edu / 123456</p>
+
                 <button onclick="showApplication('chooser')"
                     class="w-full mt-4 text-xs text-teal-600 hover:text-teal-800">Change Portal</button>
             </div>
@@ -225,8 +225,7 @@
                             <p id="admin-header-name" class="font-semibold text-sm">Loading...</p>
                             <p class="text-xs text-gray-500">Admin</p>
                         </div>
-                        <img id="admin-header-avatar" src="" alt="Admin"
-                            class="w-10 h-10 rounded-full border-2 border-teal-500">
+                        <div id="admin-header-avatar" class="w-10 h-10 rounded-full border-2 border-teal-500 bg-teal-100 text-teal-700 flex items-center justify-center font-bold"></div>
                     </div>
                 </div>
 
@@ -377,7 +376,7 @@
                         Enter Student Panel
                     </button>
                 </form>
-                <p class="text-center text-xs text-gray-400 mt-6">Credentials: 233016712 / pass123</p>
+
                 <button onclick="showApplication('chooser')"
                     class="w-full mt-4 text-xs text-teal-600 hover:text-teal-800">Change Portal</button>
             </div>
@@ -425,9 +424,7 @@
                             <p class="font-semibold text-sm" id="student-header-name">Loading...</p>
                             <p class="text-xs text-gray-500" id="student-header-id-display">Student ID: ...</p>
                         </div>
-                        <div class="w-10 h-10 bg-gray-200 rounded-full overflow-hidden border-2 border-[#108b88]">
-                            <img id="student-header-avatar" src="" alt="User">
-                        </div>
+                        <div id="student-header-avatar" class="w-10 h-10 rounded-full border-2 border-[#108b88] bg-[#e6f5f4] text-[#108b88] flex items-center justify-center font-bold"></div>
                     </div>
                 </header>
 
@@ -608,14 +605,7 @@
                                         <input type="email" id="profile-email"
                                             class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50">
                                     </div>
-                                    <div>
-                                        <label for="profile-avatar"
-                                            class="block text-sm font-medium text-gray-700 mb-2">Avatar URL
-                                            (Optional)</label>
-                                        <input type="url" id="profile-avatar"
-                                            class="w-full p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                    </div>
-                                    <div class="md:col-span-2">
+                                                                        <div class="md:col-span-2">
                                         <label for="profile-password"
                                             class="block text-sm font-medium text-gray-700 mb-2">New Password (Leave
                                             blank to keep current)</label>
@@ -673,7 +663,10 @@
                         </button>
                         <h3 class="text-2xl font-bold text-[#108b88] mb-4">Book Details</h3>
                         <div class="space-y-3">
-                            <p><strong>Title:</strong> Web Development 101</p>
+                            <p>
+
+                                <strong>Title:</strong> Web Development 101
+                            </p>
                             <p><strong>Author:</strong> Jamil Uddin</p>
                             <p><strong>ISBN:</strong> 978-1234567890</p>
                             <p><strong>Category:</strong> Computer Science</p>
@@ -857,7 +850,8 @@
 
             // Update Admin Header
             document.getElementById('admin-header-name').innerText = currentUser.name;
-            document.getElementById('admin-header-avatar').src = currentUser.avatar || 'https://picsum.photos/40/40?random=1';
+            const adminInitial = (currentUser.name || '?').trim().charAt(0).toUpperCase();
+            document.getElementById('admin-header-avatar').textContent = adminInitial;
 
             console.log('Calling loadAdminStats...');
             await loadAdminStats();
@@ -868,6 +862,7 @@
         async function loadAdminStats() {
             console.log("Loading....")
             const stats = await apiCall('dashboard.php?type=admin');
+            console.log({ stats })
 
             if (stats) {
                 document.getElementById('total-books-stat').innerText = stats.total_books || 0;
@@ -1102,6 +1097,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg. Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -1114,6 +1110,9 @@
                         <td class="px-6 py-4 whitespace-nowrap text-gray-500">${m.name}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-gray-500">${m.email}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-gray-500">${m.created_at || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="deleteMember(${m.id}, '${m.name.replace(/'/g, "\\'")}')" class="text-red-600 hover:text-red-900 ml-2">Delete</button>
+                        </td>
                     </tr>
                 `;
             });
@@ -1141,6 +1140,18 @@
             }
         }
 
+
+        async function deleteMember(id, name) {
+            if (!confirm(`Delete member "${name}"? This cannot be undone.`)) return;
+
+            const result = await apiCall('students.php', 'DELETE', { id });
+            if (result && result.status === 'success') {
+                showMessage('Deleted', 'Member removed successfully.', 'info');
+                renderMemberList();
+            } else {
+                showMessage('Error', result ? result.message : 'Failed to delete member', 'error');
+            }
+        }
 
         // --- STUDENT PANEL LOGIC ---
 
@@ -1175,7 +1186,8 @@
             // Update Header
             document.getElementById('student-header-name').innerText = currentUser.name;
             document.getElementById('student-header-id-display').innerText = 'Student ID: ' + currentUser.student_id;
-            document.getElementById('student-header-avatar').src = currentUser.avatar || 'https://i.pravatar.cc/150?u=' + currentUser.student_id;
+            const sInitial = (currentUser.name || '?').trim().charAt(0).toUpperCase();
+            document.getElementById('student-header-avatar').textContent = sInitial;
             // Load Dashboard Stats
             loadStudentStats();
         }
@@ -1433,19 +1445,17 @@
             document.getElementById('profile-name').value = currentUser.name;
             document.getElementById('profile-id').value = currentUser.student_id;
             document.getElementById('profile-email').value = currentUser.email;
-            document.getElementById('profile-avatar').value = currentUser.avatar || '';
-        }
+                    }
 
         async function saveProfile(event) {
             event.preventDefault();
             const name = document.getElementById('profile-name').value;
             const email = document.getElementById('profile-email').value;
-            const avatar = document.getElementById('profile-avatar').value;
             const password = document.getElementById('profile-password').value;
 
             const data = {
                 student_id: currentUser.student_id,
-                name, email, avatar, password
+                name, email, password
             };
 
             const result = await apiCall('students.php', 'PUT', data);
@@ -1477,7 +1487,7 @@
                 modal.querySelector('h3').innerText = book.title;
                 const details = modal.querySelector('.space-y-3');
                 details.innerHTML = `
-                < p > <strong>Title:</strong> ${book.title}</p >
+                <p> <strong>Title:</strong> ${book.title}</p>
                     <p><strong>Author:</strong> ${book.author}</p>
                     <p><strong>ISBN:</strong> ${book.isbn}</p>
                     <p><strong>Available Copies:</strong> <span class="text-green-600 font-bold">${book.available}</span></p>

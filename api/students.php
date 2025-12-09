@@ -78,5 +78,26 @@ if ($method === 'GET') {
     } catch (PDOException $e) {
         echo json_encode(["status" => "error", "message" => $e->getMessage()]);
     }
+} elseif ($method === 'DELETE') {
+    // Delete student (Admin)
+    $data = json_decode(file_get_contents("php://input"));
+
+    if (!isset($data->id) && !isset($data->student_id)) {
+        echo json_encode(["status" => "error", "message" => "Student identifier required"]);
+        exit;
+    }
+
+    try {
+        if (isset($data->id)) {
+            $stmt = $pdo->prepare("DELETE FROM students WHERE id = ?");
+            $stmt->execute([$data->id]);
+        } else {
+            $stmt = $pdo->prepare("DELETE FROM students WHERE student_id = ?");
+            $stmt->execute([$data->student_id]);
+        }
+        echo json_encode(["status" => "success", "message" => "Student deleted successfully"]);
+    } catch (PDOException $e) {
+        echo json_encode(["status" => "error", "message" => $e->getMessage()]);
+    }
 }
 ?>
